@@ -5,7 +5,8 @@
   "author": "yhchanhk01 <yhchan@hk01.com>",
   "license": "MIT",
   "scripts": {
-    "start": "node backend/app.js"
+    "start:parser": "node backend/parser.js",
+    "start:builder": "node frontend/tester.js"
   },
   "engines": {
     "node": ">=8.7.0",
@@ -14,6 +15,7 @@
   },
   "dependencies": {
     "express": "^4.17.1",
+    "flat": "^4.1.0",
     "lucene": "^2.0.4",
     "lucene-query-parser": "^1.2.0",
     "lucene-query-string-builder": "^1.0.1",

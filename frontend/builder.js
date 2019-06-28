@@ -1,35 +1,55 @@
-const queryBuilder = require('lucene-query-string-builder');
 const R = require('ramda');
+const flatten = require('flat');
 
-const searchQueryBuilder = R.pipe(
-  R.mapObjIndexed(
-    (value, key) => {
-      if (R.isNil(value) || R.isEmpty(value)) {
-        return;
-      }
-      switch (R.type(value)) {
-        case 'Object':
-          return queryBuilder.field(key, queryBuilder.range(value.min, value.max));
-        default:
-          return queryBuilder.field(key, value);
-      }
+const OPERATOR_AND = ' AND ';
+const OPERATOR_OR = ' OR ';
+
+const propExistAndIsBoolean = (key, value) => R.and(R.has(key, value), R.is(Boolean, value[ key ]));
+
+const handleDeep = (key, value) => {
+  const object = R.omit([ 'or' , 'group'], value);
+  return searchQueryBuilder({
+    ...flatten({
+      [ key ]: object
     }),
-    R.values,
-  R.reject(R.isNil),
-  R.apply(queryBuilder.and),
-  queryBuilder.group,
-);
+    or: value.or,
+    group: value.group,
+  });
+};
+const searchQueryBuilder = (object) => {
+  const operator = (propExistAndIsBoolean('or', object) && object.or) ? OPERATOR_OR : OPERATOR_AND;
+  const group = propExistAndIsBoolean('group', object) && object.group || false;
+  object = R.omit([ 'or' , 'group'], object);
 
-console.log(searchQueryBuilder(
-  {
-    title: 'fjskdfj',
-    publishStartTime: {
-      min: '1234',
-      max: '3234'
-    },
-    publishEndTime: {
-      min: '2234'
-    },
-    tags:[],
-  }
-));
+  return R.pipe(
+    R.mapObjIndexed(
+      (value, key) => {
+        if (R.isNil(value) || R.isEmpty(value)) {
+          return;
+        }
+        switch (R.type(value)) {
+          case 'Object':
+            if (!R.has('include', value)) {
+              if (R.has('from', value) || R.has('to', value)) {
+                throw new Error('search range should have key include');
+              }
+              return handleDeep(key, value);
+            }
+            return (value.include) ? `${key}: [${value.from} TO ${value.to}]` : `${key}: {${value.from} TO ${value.to}}`;
+          case 'String':
+            return `${key}: "${value}"`;
+          default:
+            return `${key}: ${value}`;
+        }
+      }),
+    R.values,
+    R.reject(R.isNil),
+    R.join(operator),
+    R.when(()=>group, (string)=>`(${string})`),
+  )(object)
+};
+
+
+module.exports = {
+  searchQueryBuilder,
+};
