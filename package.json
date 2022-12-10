@@ -14,7 +14,7 @@
     "yarn": ">=1.2.0"
   },
   "dependencies": {
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "flat": "^4.1.0",
     "lucene": "^2.0.4",
     "lucene-query-parser": "^1.2.0",
